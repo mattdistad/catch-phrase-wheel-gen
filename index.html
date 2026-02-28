@@ -3,60 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <title>Catch Phrase Wheel</title>
-<style>
-  body {
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-    gap: 40px;
-    font-family: sans-serif;
-    margin: 20px;
-  }
-
-  #wheelContainer {
-    flex-shrink: 0;
-  }
-
-  #inputContainer {
-    display: flex;
-    flex-direction: column;
-    width: 300px;
-  }
-
-  #phrases {
-    width: 100%;
-    height: 600px; /* Enough for 72 items */
-    font-family: monospace;
-    font-size: 14px;
-  }
-
-  #counter {
-    margin-top: 10px;
-    font-weight: bold;
-  }
-
-  button {
-    margin-top: 10px;
-    padding: 8px;
-    font-size: 16px;
-  }
-</style>
+<link rel="stylesheet" href="assets/css/wheel.css">
 </head>
 <body>
+
+<div id="inputContainer">
+  <input id="wheelTitle" type="text" value="My Catch Phrase Wheel" />
+  <textarea id="phrases" placeholder="Enter 72 items, one per line"></textarea>
+  <div id="counter">Items entered: 0</div>
+  <button onclick="loadDefault()">Load Default Values</button>
+  <button onclick="generateWheel()">Generate Wheel</button>
+  <button id="printButton" onclick="printWheel()">Print Wheel</button>
+</div>
 
 <div id="wheelContainer">
   <!-- Wheel will be rendered here -->
 </div>
 
-<div id="inputContainer">
-  <textarea id="phrases" placeholder="Enter 72 items, one per line"></textarea>
-  <div id="counter">Items entered: 0</div>
-  <button onclick="generateWheel()">Generate Wheel</button>
-</div>
-
 <script>
 const textarea = document.getElementById("phrases");
 const counter = document.getElementById("counter");
+const titleInput = document.getElementById("wheelTitle");
+const printButton = document.getElementById("printButton");
 
 // Update counter in real time
 textarea.addEventListener("input", () => {
@@ -64,9 +32,38 @@ textarea.addEventListener("input", () => {
   counter.textContent = `Items entered: ${lines.length}`;
 });
 
+async function loadDefault() {
+  try {
+    const response = await fetch("wheels/default.txt");
+    if (!response.ok) {
+      throw new Error("Failed to load default values");
+    }
+    const text = await response.text();
+    textarea.value = text.trimEnd();
+    const lines = textarea.value
+      .split("\n")
+      .filter(line => line.trim() !== "");
+    counter.textContent = `Items entered: ${lines.length}`;
+  } catch (err) {
+    alert("Could not load default values.");
+    console.error(err);
+  }
+}
+
+function printWheel() {
+  window.print();
+}
+
 function generateWheel() {
   const text = textarea.value.trim();
   const items = text.split("\n").map(i => i.trim()).filter(i => i !== "");
+
+  const rawTitle = (titleInput.value || "My Catch Phrase Wheel").trim();
+  const title = (rawTitle === "") ? "My Catch Phrase Wheel" : rawTitle;
+  const titleEscaped = title
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
   // Validate 72 items
   if (items.length !== 72) {
@@ -82,16 +79,24 @@ function generateWheel() {
     }
   }
 
+  // Base SVG size (geometry units); actual print size is controlled via CSS
   const sizeInches = 4.5;
   const radius = sizeInches / 2;
 
-  const innerRadius = 1.6;
-  const outerRadius = 2.1;
+  const outerCircleRadius = 2.17; // outer ring radius in SVG units
 
-  const screwHoleRadius = 0.12;
-  const screwCircleRadius = radius - 0.3;
+  const innerRadius = 1.0;
+  const outerRadius = 1.5;
+
+  const screwHoleRadius = 0.096; // ~20% smaller than 0.12
+  const screwCircleRadius = 2.0;
+
+  const centerCircleRadius = 0.45; // 0.9" diameter center circle
 
   const angleStep = 360 / 72;
+
+  const textRadius = (innerRadius + outerRadius) / 2 * 1.15;
+  const upperItems = items.map(i => i.toUpperCase());
 
   let svg = `
   <svg width="${sizeInches}in" height="${sizeInches}in"
@@ -99,49 +104,50 @@ function generateWheel() {
        xmlns="http://www.w3.org/2000/svg">
 
     <!-- Outer Circle -->
-    <circle cx="0" cy="0" r="${radius}"
+    <circle cx="0" cy="0" r="${outerCircleRadius}"
             fill="none" stroke="black" stroke-width="0.02"/>
 
-    <!-- Inner Ring Boundary -->
-    <circle cx="0" cy="0" r="${innerRadius}"
-            fill="none" stroke="black" stroke-width="0.01"/>
+    <!-- Title -->
+    <text x="0"
+    y="${(outerRadius + radius) / 2}"
+      font-size="0.13"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      fill="black">
+      ${titleEscaped}
+    </text>
 
-    <circle cx="0" cy="0" r="${outerRadius}"
-            fill="none" stroke="black" stroke-width="0.01"/>
+        <!-- Center circle -->
+        <circle cx="0" cy="0" r="${centerCircleRadius}"
+          fill="none" stroke="black" stroke-width="0.02"/>
+
   `;
 
-  // Radial divider lines + text
+  // Text only (no radial divider lines)
   for (let i = 0; i < 72; i++) {
     const angle = i * angleStep;
-
-    svg += `
-      <g transform="rotate(${angle})">
-        <line x1="${innerRadius}" y1="0"
-              x2="${outerRadius}" y2="0"
-              stroke="black" stroke-width="0.01"/>
-      </g>
-    `;
 
     const textAngle = angle + angleStep / 2;
 
     svg += `
       <g transform="rotate(${textAngle})">
-        <text x="${outerRadius - 0.05}"
+        <text x="${textRadius}"
               y="0"
-              font-size="0.11"
-              text-anchor="end"
+              font-size="0.075"
+              text-anchor="middle"
               dominant-baseline="middle"
               transform="rotate(90)"
               fill="black">
-          ${items[i]}
+          ${upperItems[i]}
         </text>
       </g>
     `;
   }
 
-  // Add three screw holes (evenly spaced 120° apart)
+  // Add three screw holes (evenly spaced 120° apart), rotated so one is at the top
+  const screwStartAngle = -90; // top
   for (let i = 0; i < 3; i++) {
-    const angle = i * 120;
+    const angle = screwStartAngle + i * 120;
     const radians = angle * (Math.PI / 180);
     const x = screwCircleRadius * Math.cos(radians);
     const y = screwCircleRadius * Math.sin(radians);
@@ -158,6 +164,9 @@ function generateWheel() {
   svg += `</svg>`;
 
   document.getElementById("wheelContainer").innerHTML = svg;
+
+  // Show print button now that a wheel exists
+  printButton.style.display = "inline-block";
 }
 </script>
 
