@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Catch Phrase Wheel Generator</title>
+  <style>
+    body { font-family: Arial; text-align: center; }
+    textarea { width: 300px; height: 150px; }
+    canvas { margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<h1>Catch Phrase Wheel Generator</h1>
+
+<p>Enter one phrase per line:</p>
+<textarea id="phrases"></textarea><br>
+<button onclick="drawWheel()">Generate Wheel</button>
+
+<br>
+<canvas id="wheel" width="500" height="500"></canvas>
+
+<script>
+function drawWheel() {
+  const text = document.getElementById("phrases").value;
+  const items = text.split("\n").filter(i => i.trim() !== "");
+  const canvas = document.getElementById("wheel");
+  const ctx = canvas.getContext("2d");
+
+  const center = 250;
+  const radius = 200;
+  const angle = (2 * Math.PI) / items.length;
+
+  ctx.clearRect(0, 0, 500, 500);
+
+  items.forEach((item, i) => {
+    ctx.beginPath();
+    ctx.moveTo(center, center);
+    ctx.arc(center, center, radius, i * angle, (i + 1) * angle);
+    ctx.fillStyle = i % 2 === 0 ? "#ffcc00" : "#ff6666";
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(center, center);
+    ctx.rotate(i * angle + angle / 2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "black";
+    ctx.font = "14px Arial";
+    ctx.fillText(item, radius - 10, 5);
+    ctx.restore();
+  });
+}
+</script>
+
+</body>
+</html>
