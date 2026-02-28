@@ -1,64 +1,30 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Catch Phrase Wheel Generator</title>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
-
-    textarea {
-      width: 300px;
-      height: 200px;
-    }
-
-    svg {
-      margin-top: 20px;
-    }
-
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-      #wheelContainer, #wheelContainer * {
-        visibility: visible;
-      }
-      #wheelContainer {
-        position: absolute;
-        left: 0;
-        top: 0;
-      }
-    }
-  </style>
-</head>
-<body>
-
-<h2>Catch Phrase 72-Item Wheel Generator</h2>
-
-<p>Enter exactly 72 phrases (one per line):</p>
-<textarea id="phrases"></textarea><br><br>
-<button onclick="generateWheel()">Generate Wheel</button>
-<button onclick="window.print()">Print</button>
-
-<div id="wheelContainer"></div>
-
 <script>
 function generateWheel() {
   const text = document.getElementById("phrases").value.trim();
-  const items = text.split("\n").filter(i => i.trim() !== "");
+  const items = text.split("\n").map(i => i.trim()).filter(i => i !== "");
 
+  // Validate 72 items
   if (items.length !== 72) {
     alert("You must enter exactly 72 items.");
     return;
   }
 
+  // Validate max 20 characters per item
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].length > 20) {
+      alert(`Item ${i + 1} exceeds 20 characters:\n"${items[i]}"`);
+      return;
+    }
+  }
+
   const sizeInches = 4.5;
   const radius = sizeInches / 2;
 
-  const innerRadius = 1.6;   // inner text ring start
-  const outerRadius = 2.1;   // outer text ring end
+  const innerRadius = 1.6;
+  const outerRadius = 2.1;
+
+  const screwHoleRadius = 0.12;
+  const screwCircleRadius = radius - 0.3;
 
   const angleStep = 360 / 72;
 
@@ -79,6 +45,7 @@ function generateWheel() {
             fill="none" stroke="black" stroke-width="0.01"/>
   `;
 
+  // Radial divider lines + text
   for (let i = 0; i < 72; i++) {
     const angle = i * angleStep;
 
@@ -96,7 +63,7 @@ function generateWheel() {
       <g transform="rotate(${textAngle})">
         <text x="${outerRadius - 0.05}"
               y="0"
-              font-size="0.12"
+              font-size="0.11"
               text-anchor="end"
               dominant-baseline="middle"
               transform="rotate(90)"
@@ -107,11 +74,24 @@ function generateWheel() {
     `;
   }
 
+  // Add three screw holes (evenly spaced 120° apart)
+  for (let i = 0; i < 3; i++) {
+    const angle = i * 120;
+    const radians = angle * (Math.PI / 180);
+    const x = screwCircleRadius * Math.cos(radians);
+    const y = screwCircleRadius * Math.sin(radians);
+
+    svg += `
+      <circle cx="${x}" cy="${y}"
+              r="${screwHoleRadius}"
+              fill="none"
+              stroke="black"
+              stroke-width="0.02"/>
+    `;
+  }
+
   svg += `</svg>`;
 
   document.getElementById("wheelContainer").innerHTML = svg;
 }
 </script>
-
-</body>
-</html>
