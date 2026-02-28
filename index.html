@@ -2,53 +2,114 @@
 <html>
 <head>
   <title>Catch Phrase Wheel Generator</title>
+
   <style>
-    body { font-family: Arial; text-align: center; }
-    textarea { width: 300px; height: 150px; }
-    canvas { margin-top: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    textarea {
+      width: 300px;
+      height: 200px;
+    }
+
+    svg {
+      margin-top: 20px;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #wheelContainer, #wheelContainer * {
+        visibility: visible;
+      }
+      #wheelContainer {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+    }
   </style>
 </head>
 <body>
 
-<h1>Catch Phrase Wheel Generator</h1>
+<h2>Catch Phrase 72-Item Wheel Generator</h2>
 
-<p>Enter one phrase per line:</p>
-<textarea id="phrases"></textarea><br>
-<button onclick="drawWheel()">Generate Wheel</button>
+<p>Enter exactly 72 phrases (one per line):</p>
+<textarea id="phrases"></textarea><br><br>
+<button onclick="generateWheel()">Generate Wheel</button>
+<button onclick="window.print()">Print</button>
 
-<br>
-<canvas id="wheel" width="500" height="500"></canvas>
+<div id="wheelContainer"></div>
 
 <script>
-function drawWheel() {
-  const text = document.getElementById("phrases").value;
+function generateWheel() {
+  const text = document.getElementById("phrases").value.trim();
   const items = text.split("\n").filter(i => i.trim() !== "");
-  const canvas = document.getElementById("wheel");
-  const ctx = canvas.getContext("2d");
 
-  const center = 250;
-  const radius = 200;
-  const angle = (2 * Math.PI) / items.length;
+  if (items.length !== 72) {
+    alert("You must enter exactly 72 items.");
+    return;
+  }
 
-  ctx.clearRect(0, 0, 500, 500);
+  const sizeInches = 4.5;
+  const radius = sizeInches / 2;
 
-  items.forEach((item, i) => {
-    ctx.beginPath();
-    ctx.moveTo(center, center);
-    ctx.arc(center, center, radius, i * angle, (i + 1) * angle);
-    ctx.fillStyle = i % 2 === 0 ? "#ffcc00" : "#ff6666";
-    ctx.fill();
-    ctx.stroke();
+  const innerRadius = 1.6;   // inner text ring start
+  const outerRadius = 2.1;   // outer text ring end
 
-    ctx.save();
-    ctx.translate(center, center);
-    ctx.rotate(i * angle + angle / 2);
-    ctx.textAlign = "right";
-    ctx.fillStyle = "black";
-    ctx.font = "14px Arial";
-    ctx.fillText(item, radius - 10, 5);
-    ctx.restore();
-  });
+  const angleStep = 360 / 72;
+
+  let svg = `
+  <svg width="${sizeInches}in" height="${sizeInches}in"
+       viewBox="-${radius} -${radius} ${sizeInches} ${sizeInches}"
+       xmlns="http://www.w3.org/2000/svg">
+
+    <!-- Outer Circle -->
+    <circle cx="0" cy="0" r="${radius}"
+            fill="none" stroke="black" stroke-width="0.02"/>
+
+    <!-- Inner Ring Boundary -->
+    <circle cx="0" cy="0" r="${innerRadius}"
+            fill="none" stroke="black" stroke-width="0.01"/>
+
+    <circle cx="0" cy="0" r="${outerRadius}"
+            fill="none" stroke="black" stroke-width="0.01"/>
+  `;
+
+  for (let i = 0; i < 72; i++) {
+    const angle = i * angleStep;
+
+    svg += `
+      <g transform="rotate(${angle})">
+        <line x1="${innerRadius}" y1="0"
+              x2="${outerRadius}" y2="0"
+              stroke="black" stroke-width="0.01"/>
+      </g>
+    `;
+
+    const textAngle = angle + angleStep / 2;
+
+    svg += `
+      <g transform="rotate(${textAngle})">
+        <text x="${outerRadius - 0.05}"
+              y="0"
+              font-size="0.12"
+              text-anchor="end"
+              dominant-baseline="middle"
+              transform="rotate(90)"
+              fill="black">
+          ${items[i]}
+        </text>
+      </g>
+    `;
+  }
+
+  svg += `</svg>`;
+
+  document.getElementById("wheelContainer").innerHTML = svg;
 }
 </script>
 
